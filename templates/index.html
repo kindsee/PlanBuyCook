@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Inicio - PlanBuyCook{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 text-center">
+        <h1 class="display-4">
+            <i class="bi bi-egg-fried text-success"></i>
+            Bienvenido a PlanBuyCook
+        </h1>
+        <p class="lead text-muted">Tu asistente personal para la gestión de comidas en casa</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Calendario -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-calendar3 text-success" style="font-size: 3rem;"></i>
+                <h5 class="card-title mt-3">Calendario de Comidas</h5>
+                <p class="card-text">Planifica tus desayunos, almuerzos y cenas para la semana.</p>
+                <a href="{{ url_for('main.calendar') }}" class="btn btn-success">
+                    <i class="bi bi-calendar-check"></i> Ver Calendario
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Platos -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-dish text-primary" style="font-size: 3rem;"></i>
+                <h5 class="card-title mt-3">Gestión de Platos</h5>
+                <p class="card-text">Crea y administra tus recetas con sus ingredientes.</p>
+                <a href="{{ url_for('main.dishes') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Ver Platos
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ingredientes -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-egg text-warning" style="font-size: 3rem;"></i>
+                <h5 class="card-title mt-3">Ingredientes</h5>
+                <p class="card-text">Define los ingredientes base para tus platos.</p>
+                <a href="{{ url_for('main.ingredients') }}" class="btn btn-warning">
+                    <i class="bi bi-list-ul"></i> Ver Ingredientes
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Almacén -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-box-seam text-info" style="font-size: 3rem;"></i>
+                <h5 class="card-title mt-3">Almacén Virtual</h5>
+                <p class="card-text">Controla el stock disponible de cada ingrediente.</p>
+                <a href="{{ url_for('main.pantry') }}" class="btn btn-info text-white">
+                    <i class="bi bi-box"></i> Ver Almacén
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Compra -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-cart3 text-danger" style="font-size: 3rem;"></i>
+                <h5 class="card-title mt-3">Lista de Compra</h5>
+                <p class="card-text">Genera automáticamente tu lista de compras.</p>
+                <a href="{{ url_for('main.shopping') }}" class="btn btn-danger">
+                    <i class="bi bi-cart-check"></i> Ver Compras
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 bg-light">
+            <div class="card-body text-center">
+                <i class="bi bi-info-circle text-secondary" style="font-size: 3rem;"></i>
+                <h5 class="card-title mt-3">¿Cómo funciona?</h5>
+                <p class="card-text small">
+                    1. Crea ingredientes y platos<br>
+                    2. Planifica tu calendario<br>
+                    3. Genera tu lista de compra<br>
+                    4. ¡Disfruta de tus comidas!
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h5><i class="bi bi-lightbulb"></i> Características principales:</h5>
+            <ul class="mb-0">
+                <li><strong>Control automático de stock:</strong> Los ingredientes se descuentan automáticamente al planificar comidas</li>
+                <li><strong>Opciones especiales:</strong> Marca días para "Pedir comida" o "Comer fuera" (no consumen ingredientes)</li>
+                <li><strong>Lista inteligente:</strong> Calcula exactamente qué comprar según tu planificación</li>
+                <li><strong>Alertas de stock:</strong> Te avisa si no hay ingredientes suficientes</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

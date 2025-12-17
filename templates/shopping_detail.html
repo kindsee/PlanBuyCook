@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}{{ shopping_list.name }} - PlanBuyCook{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2>
+                    <i class="bi bi-cart3"></i> {{ shopping_list.name }}
+                </h2>
+                <p class="text-muted mb-0">
+                    <i class="bi bi-calendar-range"></i>
+                    {{ shopping_list.start_date.strftime('%d/%m/%Y') }} - 
+                    {{ shopping_list.end_date.strftime('%d/%m/%Y') }}
+                </p>
+            </div>
+            <div>
+                {% if shopping_list.completed %}
+                <span class="badge bg-success fs-5">
+                    <i class="bi bi-check-circle"></i> Completada
+                </span>
+                {% else %}
+                <span class="badge bg-warning text-dark fs-5">
+                    <i class="bi bi-hourglass-split"></i> Pendiente
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if shopping_list.items %}
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th><i class="bi bi-tag"></i> Producto</th>
+                        <th class="text-center"><i class="bi bi-box"></i> Disponible</th>
+                        <th class="text-center"><i class="bi bi-basket2"></i> Necesario</th>
+                        <th class="text-center"><i class="bi bi-cart-plus"></i> A Comprar</th>
+                        {% if not shopping_list.completed %}
+                        <th class="text-center">Ajustar</th>
+                        {% endif %}
+                        {% if shopping_list.completed %}
+                        <th class="text-center">Estado</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in shopping_list.items %}
+                    <tr>
+                        <td><strong>{{ item.ingredient.name }}</strong></td>
+                        <td class="text-center">
+                            <span class="badge bg-secondary">
+                                {{ item.quantity_available }} {{ item.ingredient.unit }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-info">
+                                {{ item.quantity_needed }} {{ item.ingredient.unit }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-success fs-6">
+                                {{ item.quantity_to_buy }} {{ item.ingredient.unit }}
+                            </span>
+                        </td>
+                        {% if not shopping_list.completed %}
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-primary" 
+                                    onclick="editQuantity({{ item.id }}, {{ item.quantity_to_buy }}, '{{ item.ingredient.unit }}')">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </td>
+                        {% endif %}
+                        {% if shopping_list.completed %}
+                        <td class="text-center">
+                            {% if item.purchased %}
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                            <i class="bi bi-x-circle-fill text-danger"></i>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer bg-light">
+        <div class="row text-center">
+            <div class="col-md-4">
+                <h6 class="text-muted mb-1">Total Items</h6>
+                <h4 class="mb-0">{{ shopping_list.total_items }}</h4>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-muted mb-1">Creada</h6>
+                <p class="mb-0">{{ shopping_list.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-muted mb-1">Estado</h6>
+                <p class="mb-0">
+                    {% if shopping_list.completed %}
+                    <span class="badge bg-success">Completada</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark">Pendiente</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('main.shopping') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Volver a Listas
+            </a>
+            
+            {% if not shopping_list.completed %}
+            <form method="POST" action="{{ url_for('main.complete_shopping', list_id=shopping_list.id) }}" 
+                  class="d-inline">
+                <button type="submit" class="btn btn-success"
+                        onclick="return confirm('¿Marcar lista como completada? Los items se añadirán al almacén.')">
+                    <i class="bi bi-check-circle"></i> Marcar como Completada
+                </button>
+            </form>
+            {% endif %}
+            
+            <button onclick="window.print()" class="btn btn-outline-primary">
+                <i class="bi bi-printer"></i> Imprimir
+            </button>
+            
+            <form method="POST" action="{{ url_for('main.delete_shopping', list_id=shopping_list.id) }}" 
+                  class="d-inline ms-auto">
+                <button type="submit" class="btn btn-outline-danger"
+                        onclick="return confirm('¿Eliminar esta lista?')">
+                    <i class="bi bi-trash"></i> Eliminar
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-warning">
+    <h5><i class="bi bi-exclamation-triangle"></i> Lista vacía</h5>
+    <p class="mb-0">No se encontraron ingredientes para comprar en el período seleccionado. 
+    Esto puede deberse a:</p>
+    <ul class="mt-2">
+        <li>No hay comidas planificadas en ese período</li>
+        <li>El stock actual cubre todas las necesidades</li>
+        <li>Las comidas planificadas son "Pedir comida" o "Comer fuera"</li>
+    </ul>
+    <a href="{{ url_for('main.calendar') }}" class="btn btn-primary mt-2">
+        <i class="bi bi-calendar"></i> Ir al Calendario
+    </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+@media print {
+    .btn, .navbar, footer {
+        display: none !important;
+    }
+    .card {
+        border: 1px solid #000 !important;
+        box-shadow: none !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function editQuantity(itemId, currentQuantity, unit) {
+    const newQuantity = prompt(`Nueva cantidad (${unit}):`, currentQuantity);
+    
+    if (newQuantity !== null && newQuantity !== '' && !isNaN(newQuantity) && parseFloat(newQuantity) > 0) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `{{ url_for('main.update_shopping_item', list_id=shopping_list.id, item_id=0) }}`.replace('/item/0/', `/item/${itemId}/`);
+        
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'quantity';
+        input.value = newQuantity;
+        
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+    } else if (newQuantity !== null) {
+        alert('Por favor, introduce un número válido mayor que 0');
+    }
+}
+</script>
+{% endblock %}

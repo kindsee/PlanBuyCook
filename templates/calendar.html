@@ -1,0 +1,739 @@
+{% extends "base.html" %}
+
+{% block title %}Calendario - PlanBuyCook{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2><i class="bi bi-calendar3"></i> Calendario de Comidas</h2>
+            <div class="btn-group">
+                <a href="{{ url_for('main.calendar', week=week_offset-1) }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-chevron-left"></i> Semana Anterior
+                </a>
+                <a href="{{ url_for('main.calendar', week=0) }}" class="btn btn-outline-primary">
+                    <i class="bi bi-house"></i> Semana Actual
+                </a>
+                <a href="{{ url_for('main.calendar', week=week_offset+1) }}" class="btn btn-outline-secondary">
+                    Semana Siguiente <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Calendario Semanal -->
+<div class="row">
+    {% for day in days %}
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar-day"></i>
+                    {{ day.date.strftime('%A, %d de %B %Y') }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for meal_type in meal_types %}
+                    {% set meal = day.get_meal(meal_type) %}
+                    <div class="col-md-4">
+                        <div class="card meal-card {% if meal and meal.confirmed %}confirmed{% elif meal and meal.meal_dishes|length > 0 %}assigned{% elif meal and meal.special_type %}special{% endif %}">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="card-subtitle mb-0">
+                                        {% if meal_type == 'breakfast' %}
+                                            <i class="bi bi-sunrise"></i> {{ meal_names[meal_type] }}
+                                        {% elif meal_type == 'lunch' %}
+                                            <i class="bi bi-sun"></i> {{ meal_names[meal_type] }}
+                                        {% else %}
+                                            <i class="bi bi-moon-stars"></i> {{ meal_names[meal_type] }}
+                                        {% endif %}
+                                    </h6>
+                                    
+                                    {% if meal and meal.confirmed %}
+                                        <span class="badge bg-success" title="Comida ejecutada">
+                                            <i class="bi bi-check-circle-fill"></i> Confirmada
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                
+                                {% if meal %}
+                                    <!-- Mostrar platos asignados -->
+                                    {% if meal.meal_dishes|length > 0 %}
+                                        <div class="dishes-list mb-2">
+                                            {% for meal_dish in meal.meal_dishes %}
+                                            <div class="dish-item d-flex justify-content-between align-items-start mb-2 p-2 border rounded {% if meal.confirmed %}bg-light{% endif %}">
+                                                <div class="flex-grow-1">
+                                                    <strong>{{ meal_dish.display_name }}</strong>
+                                                    {% if meal_dish.dish.description %}
+                                                    <br><small class="text-muted">{{ meal_dish.dish.description }}</small>
+                                                    {% endif %}
+                                                </div>
+                                                {% if not meal.confirmed %}
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-primary"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#editDishModal"
+                                                            data-meal-dish-id="{{ meal_dish.id }}"
+                                                            data-dish-id="{{ meal_dish.dish_id }}"
+                                                            data-dish-name="{{ meal_dish.dish.name }}"
+                                                            data-portions="{{ meal_dish.portions }}"
+                                                            title="Editar plato">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    <form method="POST" action="{{ url_for('main.remove_dish_from_meal') }}" class="d-inline">
+                                                        <input type="hidden" name="meal_dish_id" value="{{ meal_dish.id }}">
+                                                        <button type="submit" class="btn btn-outline-danger"
+                                                                onclick="return confirm('¿Eliminar este plato?')"
+                                                                title="Eliminar plato">
+                                                            <i class="bi bi-x-circle"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            {% if not meal.confirmed %}
+                                                <button class="btn btn-sm btn-outline-success" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#assignMealModal"
+                                                        data-day-id="{{ day.id }}"
+                                                        data-meal-type="{{ meal_type }}">
+                                                    <i class="bi bi-plus-circle"></i> Añadir plato
+                                                </button>
+                                                
+                                                <form method="POST" action="{{ url_for('main.confirm_meal') }}" class="d-inline">
+                                                    <input type="hidden" name="meal_id" value="{{ meal.id }}">
+                                                    <button type="submit" class="btn btn-sm btn-success"
+                                                            onclick="return confirm('¿Confirmar que ejecutaste esta comida? Se descontarán los ingredientes del stock real.')"
+                                                            title="Confirmar comida ejecutada">
+                                                        <i class="bi bi-check-circle"></i> Confirmar
+                                                    </button>
+                                                </form>
+                                                
+                                                <button class="btn btn-sm btn-outline-info"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#replicateMealModal"
+                                                        data-meal-id="{{ meal.id }}"
+                                                        data-meal-type="{{ meal_type }}"
+                                                        title="Replicar comida a otro día">
+                                                    <i class="bi bi-files"></i> Replicar
+                                                </button>
+                                            {% else %}
+                                                <form method="POST" action="{{ url_for('main.unconfirm_meal') }}" class="d-inline">
+                                                    <input type="hidden" name="meal_id" value="{{ meal.id }}">
+                                                    <button type="submit" class="btn btn-sm btn-outline-warning"
+                                                            onclick="return confirm('¿Deshacer confirmación? Se devolverán los ingredientes al stock real.')"
+                                                            title="Deshacer confirmación">
+                                                        <i class="bi bi-arrow-counterclockwise"></i> Deshacer
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                        </div>
+                                    
+                                    <!-- Mostrar comida especial -->
+                                    {% elif meal.special_type %}
+                                        <p class="card-text">
+                                            <strong>{{ meal.display_name }}</strong>
+                                        </p>
+                                        
+                                        <div class="d-flex gap-2">
+                                            {% if not meal.confirmed %}
+                                                <button class="btn btn-sm btn-outline-primary" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#assignMealModal"
+                                                        data-day-id="{{ day.id }}"
+                                                        data-meal-type="{{ meal_type }}">
+                                                    <i class="bi bi-pencil"></i> Cambiar
+                                                </button>
+                                                <form method="POST" action="{{ url_for('main.remove_meal') }}" class="d-inline">
+                                                    <input type="hidden" name="day_id" value="{{ day.id }}">
+                                                    <input type="hidden" name="meal_type" value="{{ meal_type }}">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                            onclick="return confirm('¿Eliminar esta comida?')">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                                <form method="POST" action="{{ url_for('main.confirm_meal') }}" class="d-inline">
+                                                    <input type="hidden" name="meal_id" value="{{ meal.id }}">
+                                                    <button type="submit" class="btn btn-sm btn-success"
+                                                            title="Marcar como ejecutada">
+                                                        <i class="bi bi-check-circle"></i>
+                                                    </button>
+                                                </form>
+                                            {% else %}
+                                                <span class="text-success"><i class="bi bi-check-circle-fill"></i> Ejecutada</span>
+                                            {% endif %}
+                                        </div>
+                                    
+                                    <!-- Sin asignar -->
+                                    {% else %}
+                                        <p class="text-muted mb-2">Sin asignar</p>
+                                        <button class="btn btn-sm btn-success" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#assignMealModal"
+                                                data-day-id="{{ day.id }}"
+                                                data-meal-type="{{ meal_type }}">
+                                            <i class="bi bi-plus-circle"></i> Asignar
+                                        </button>
+                                    {% endif %}
+                                {% else %}
+                                    <p class="text-muted mb-2">Sin asignar</p>
+                                    <button class="btn btn-sm btn-success" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#assignMealModal"
+                                            data-day-id="{{ day.id }}"
+                                            data-meal-type="{{ meal_type }}">
+                                        <i class="bi bi-plus-circle"></i> Asignar
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal para Asignar Comida -->
+<div class="modal fade" id="assignMealModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Añadir Plato a Comida</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('main.assign_meal') }}">
+                <div class="modal-body">
+                    <input type="hidden" name="day_id" id="modal_day_id">
+                    <input type="hidden" name="meal_type" id="modal_meal_type">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de comida:</label>
+                        <select name="assignment_type" id="assignment_type" class="form-select" required>
+                            <option value="dish" selected>Plato</option>
+                            <option value="order">Pedir comida</option>
+                            <option value="eat_out">Comer fuera</option>
+                        </select>
+                    </div>
+                    
+                    <div id="dish_selection">
+                        <div class="mb-3">
+                            <label class="form-label">Seleccionar plato:</label>
+                            <select name="dish_id" id="dish_select" class="form-select" required>
+                                <option value="">-- Seleccionar plato --</option>
+                            </select>
+                            <div class="form-text">Si no hay platos, créalos primero en la sección "Platos"</div>
+                        </div>
+                        
+                        <!-- Selector de modo -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">¿Cómo vas a preparar este plato?</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="dish_mode" id="mode_portions" value="portions" checked>
+                                <label class="form-check-label" for="mode_portions">
+                                    <strong>Hacer porciones múltiples</strong>
+                                    <br><small class="text-muted">Ej: Hacer 5 tortillas → descuenta ingredientes 5 veces</small>
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="dish_mode" id="mode_batch_new" value="batch_new">
+                                <label class="form-check-label" for="mode_batch_new">
+                                    <strong>Hacer plato grande para varios días</strong>
+                                    <br><small class="text-muted">Ej: Hacer 1 paella grande y usar 50% hoy, 30% mañana...</small>
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="dish_mode" id="mode_batch_existing" value="batch_existing">
+                                <label class="form-check-label" for="mode_batch_existing">
+                                    <strong>Usar de un batch ya preparado</strong>
+                                    <br><small class="text-muted">Continuar usando un plato que ya hiciste antes</small>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Modo: Porciones múltiples -->
+                        <div id="portions_section" class="mode-section">
+                            <div class="mb-3">
+                                <label class="form-label">Número de porciones a hacer:</label>
+                                <div class="input-group mb-2">
+                                    <button class="btn btn-outline-secondary" type="button" id="portions_minus">
+                                        <i class="bi bi-dash"></i>
+                                    </button>
+                                    <input type="number" name="portions" id="portions_input" 
+                                           class="form-control text-center" value="1" min="1" max="99">
+                                    <button class="btn btn-outline-secondary" type="button" id="portions_plus">
+                                        <i class="bi bi-plus"></i>
+                                    </button>
+                                </div>
+                                <div class="btn-group w-100 mb-2" role="group">
+                                    <button type="button" class="btn btn-outline-primary btn-sm portions-quick" data-portions="1">x1</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm portions-quick" data-portions="2">x2</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm portions-quick" data-portions="3">x3</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm portions-quick" data-portions="5">x5</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm portions-quick" data-portions="10">x10</button>
+                                </div>
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i> 
+                                    Se descontarán los ingredientes <strong>x<span id="portions_display">1</span></strong> veces
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Modo: Batch nuevo -->
+                        <div id="batch_new_section" class="mode-section" style="display:none;">
+                            <div class="mb-3">
+                                <label class="form-label">¿Qué porcentaje vas a usar HOY?</label>
+                                <div class="input-group">
+                                    <input type="number" name="batch_percentage_new" id="batch_percentage_new" 
+                                           class="form-control" value="50" min="1" max="100" step="1">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                <div class="btn-group w-100 mt-2" role="group">
+                                    <button type="button" class="btn btn-outline-success btn-sm batch-percent-quick" data-percent="100">100%</button>
+                                    <button type="button" class="btn btn-outline-success btn-sm batch-percent-quick" data-percent="50">50%</button>
+                                    <button type="button" class="btn btn-outline-success btn-sm batch-percent-quick" data-percent="33">33%</button>
+                                    <button type="button" class="btn btn-outline-success btn-sm batch-percent-quick" data-percent="25">25%</button>
+                                    <button type="button" class="btn btn-outline-success btn-sm batch-percent-quick" data-percent="20">20%</button>
+                                </div>
+                                <div class="alert alert-warning mt-2">
+                                    <i class="bi bi-exclamation-triangle"></i> 
+                                    Se hará 1 plato completo ahora y se guardará el <strong><span id="remaining_display">50</span>%</strong> restante para usar otro día
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Modo: Batch existente -->
+                        <div id="batch_existing_section" class="mode-section" style="display:none;">
+                            <div class="mb-3">
+                                <label class="form-label">Seleccionar batch disponible:</label>
+                                <select name="batch_id" id="batch_select" class="form-select">
+                                    <option value="">-- Cargando batches... --</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">¿Qué porcentaje del batch vas a usar?</label>
+                                <div class="input-group">
+                                    <input type="number" name="batch_percentage_existing" id="batch_percentage_existing" 
+                                           class="form-control" value="50" min="1" max="100" step="1">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                <div id="batch_remaining_info" class="form-text"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Añadir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Replicar Comida -->
+<div class="modal fade" id="replicateMealModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Replicar Comida a Otro Día</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('main.replicate_meal') }}">
+                <div class="modal-body">
+                    <input type="hidden" name="source_meal_id" id="replicate_meal_id">
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 
+                        Esta función copiará todos los platos de la comida seleccionada al día que elijas.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Seleccionar día destino:</label>
+                        <input type="date" name="target_date" class="form-control" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de comida destino:</label>
+                        <select name="target_meal_type" class="form-select" required>
+                            <option value="breakfast">Desayuno</option>
+                            <option value="lunch">Almuerzo</option>
+                            <option value="dinner">Cena</option>
+                        </select>
+                        <div class="form-text">Puedes copiar un desayuno a una cena, por ejemplo</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-files"></i> Replicar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Editar Plato -->
+<div class="modal fade" id="editDishModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Plato</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('main.edit_meal_dish') }}">
+                <div class="modal-body">
+                    <input type="hidden" name="meal_dish_id" id="edit_meal_dish_id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Plato actual:</label>
+                        <input type="text" id="edit_current_dish" class="form-control" disabled>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Cambiar a plato:</label>
+                        <select name="dish_id" id="edit_dish_select" class="form-select" required>
+                            <option value="">-- Seleccionar plato --</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Número de porciones:</label>
+                        <div class="input-group mb-2">
+                            <button class="btn btn-outline-secondary" type="button" id="edit_portions_minus">
+                                <i class="bi bi-dash"></i>
+                            </button>
+                            <input type="number" name="portions" id="edit_portions_input" 
+                                   class="form-control text-center" value="1" min="1" max="99" required>
+                            <button class="btn btn-outline-secondary" type="button" id="edit_portions_plus">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
+                        <div class="btn-group w-100 mb-2" role="group">
+                            <button type="button" class="btn btn-outline-primary btn-sm portions-quick-edit" data-portions="1">
+                                x1 (100%)
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm portions-quick-edit" data-portions="2">
+                                x2 (50%)
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm portions-quick-edit" data-portions="3">
+                                x3 (33%)
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm portions-quick-edit" data-portions="5">
+                                x5 (20%)
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm portions-quick-edit" data-portions="10">
+                                x10 (10%)
+                            </button>
+                        </div>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle"></i> 
+                            Usa los botones rápidos o ajusta manualmente. Ej: "x2" = usar la mitad del plato (50%)
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Cargar platos disponibles
+let dishes = [];
+let batches = [];
+
+fetch('{{ url_for("main.api_dishes") }}')
+    .then(response => response.json())
+    .then(data => {
+        dishes = data;
+    })
+    .catch(error => console.error('Error cargando platos:', error));
+
+// Configurar modal de asignación
+const assignMealModal = document.getElementById('assignMealModal');
+assignMealModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const dayId = button.getAttribute('data-day-id');
+    const mealType = button.getAttribute('data-meal-type');
+    
+    document.getElementById('modal_day_id').value = dayId;
+    document.getElementById('modal_meal_type').value = mealType;
+    
+    // Resetear formulario
+    document.getElementById('assignment_type').value = 'dish';
+    document.getElementById('dish_selection').style.display = 'block';
+    document.getElementById('portions_input').value = 1;
+    document.getElementById('mode_portions').checked = true;
+    showModeSection('portions');
+    
+    // Poblar select con platos
+    populateDishSelect();
+});
+
+function populateDishSelect() {
+    const dishSelect = document.getElementById('dish_select');
+    dishSelect.innerHTML = '<option value="">-- Seleccionar plato --</option>';
+    
+    dishes.forEach(dish => {
+        const option = document.createElement('option');
+        option.value = dish.id;
+        option.textContent = dish.name;
+        dishSelect.appendChild(option);
+    });
+}
+
+// Mostrar/ocultar selector de platos
+document.getElementById('assignment_type').addEventListener('change', function() {
+    const dishSelection = document.getElementById('dish_selection');
+    const dishSelect = document.getElementById('dish_select');
+    
+    if (this.value === 'dish') {
+        dishSelection.style.display = 'block';
+        dishSelect.required = true;
+        populateDishSelect();
+    } else {
+        dishSelection.style.display = 'none';
+        dishSelect.required = false;
+    }
+});
+
+// Manejar cambio de modo
+document.querySelectorAll('input[name="dish_mode"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        showModeSection(this.value);
+    });
+});
+
+function showModeSection(mode) {
+    // Ocultar todas las secciones
+    document.querySelectorAll('.mode-section').forEach(section => {
+        section.style.display = 'none';
+    });
+    
+    // Mostrar la sección seleccionada
+    if (mode === 'portions') {
+        document.getElementById('portions_section').style.display = 'block';
+    } else if (mode === 'batch_new') {
+        document.getElementById('batch_new_section').style.display = 'block';
+    } else if (mode === 'batch_existing') {
+        document.getElementById('batch_existing_section').style.display = 'block';
+        loadAvailableBatches();
+    }
+}
+
+// Cargar batches disponibles
+function loadAvailableBatches() {
+    const dishId = document.getElementById('dish_select').value;
+    const batchSelect = document.getElementById('batch_select');
+    
+    if (!dishId) {
+        batchSelect.innerHTML = '<option value="">Primero selecciona un plato</option>';
+        return;
+    }
+    
+    fetch(`{{ url_for("main.api_batches") }}?dish_id=${dishId}`)
+        .then(response => response.json())
+        .then(data => {
+            batchSelect.innerHTML = '<option value="">-- Seleccionar batch --</option>';
+            
+            if (data.length === 0) {
+                batchSelect.innerHTML = '<option value="">No hay batches disponibles para este plato</option>';
+            } else {
+                data.forEach(batch => {
+                    const option = document.createElement('option');
+                    option.value = batch.id;
+                    option.textContent = `${batch.display_info}`;
+                    option.setAttribute('data-remaining', batch.percentage_remaining);
+                    batchSelect.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error cargando batches:', error);
+            batchSelect.innerHTML = '<option value="">Error al cargar batches</option>';
+        });
+}
+
+// Actualizar info de batch seleccionado
+document.getElementById('batch_select').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const remaining = selectedOption.getAttribute('data-remaining');
+    const infoDiv = document.getElementById('batch_remaining_info');
+    
+    if (remaining) {
+        infoDiv.innerHTML = `<i class="bi bi-info-circle"></i> Este batch tiene <strong>${remaining}%</strong> disponible`;
+        document.getElementById('batch_percentage_existing').max = remaining;
+    } else {
+        infoDiv.innerHTML = '';
+    }
+});
+
+// Recargar batches cuando cambia el plato
+document.getElementById('dish_select').addEventListener('change', function() {
+    const mode = document.querySelector('input[name="dish_mode"]:checked').value;
+    if (mode === 'batch_existing') {
+        loadAvailableBatches();
+    }
+});
+
+// Botones +/- para porciones
+document.getElementById('portions_minus').addEventListener('click', function() {
+    const input = document.getElementById('portions_input');
+    const val = parseInt(input.value);
+    if (val > 1) {
+        input.value = val - 1;
+        updatePortionsDisplay();
+    }
+});
+
+document.getElementById('portions_plus').addEventListener('click', function() {
+    const input = document.getElementById('portions_input');
+    const val = parseInt(input.value);
+    if (val < 99) {
+        input.value = val + 1;
+        updatePortionsDisplay();
+    }
+});
+
+// Actualizar display de porciones
+document.getElementById('portions_input').addEventListener('input', updatePortionsDisplay);
+
+function updatePortionsDisplay() {
+    const portions = document.getElementById('portions_input').value;
+    document.getElementById('portions_display').textContent = portions;
+}
+
+// Botones rápidos de porciones
+document.querySelectorAll('.portions-quick').forEach(button => {
+    button.addEventListener('click', function() {
+        const portions = this.getAttribute('data-portions');
+        document.getElementById('portions_input').value = portions;
+        updatePortionsDisplay();
+        
+        // Highlight
+        document.querySelectorAll('.portions-quick').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        this.classList.add('active');
+    });
+});
+
+// Botones rápidos de porcentaje para batch nuevo
+document.querySelectorAll('.batch-percent-quick').forEach(button => {
+    button.addEventListener('click', function() {
+        const percent = this.getAttribute('data-percent');
+        document.getElementById('batch_percentage_new').value = percent;
+        updateRemainingDisplay();
+        
+        // Highlight
+        document.querySelectorAll('.batch-percent-quick').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        this.classList.add('active');
+    });
+});
+
+// Actualizar porcentaje restante
+document.getElementById('batch_percentage_new').addEventListener('input', updateRemainingDisplay);
+
+function updateRemainingDisplay() {
+    const used = parseInt(document.getElementById('batch_percentage_new').value) || 0;
+    const remaining = 100 - used;
+    document.getElementById('remaining_display').textContent = remaining;
+}
+
+// Inicializar displays
+updatePortionsDisplay();
+updateRemainingDisplay();
+
+// Configurar modal de replicación
+const replicateMealModal = document.getElementById('replicateMealModal');
+replicateMealModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const mealId = button.getAttribute('data-meal-id');
+    const mealType = button.getAttribute('data-meal-type');
+    
+    document.getElementById('replicate_meal_id').value = mealId;
+    
+    // Pre-seleccionar el mismo tipo de comida
+    const targetSelect = document.querySelector('select[name="target_meal_type"]');
+    targetSelect.value = mealType;
+});
+
+// Configurar modal de edición
+const editDishModal = document.getElementById('editDishModal');
+editDishModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const mealDishId = button.getAttribute('data-meal-dish-id');
+    const dishId = button.getAttribute('data-dish-id');
+    const dishName = button.getAttribute('data-dish-name');
+    const portions = button.getAttribute('data-portions');
+    
+    document.getElementById('edit_meal_dish_id').value = mealDishId;
+    document.getElementById('edit_current_dish').value = dishName;
+    document.getElementById('edit_portions_input').value = portions;
+    
+    // Poblar select con platos
+    const editDishSelect = document.getElementById('edit_dish_select');
+    editDishSelect.innerHTML = '<option value="">-- Seleccionar plato --</option>';
+    
+    dishes.forEach(dish => {
+        const option = document.createElement('option');
+        option.value = dish.id;
+        option.textContent = dish.name;
+        if (dish.id == dishId) {
+            option.selected = true;
+        }
+        editDishSelect.appendChild(option);
+    });
+});
+
+// Botones +/- para edición de porciones
+document.getElementById('edit_portions_minus').addEventListener('click', function() {
+    const input = document.getElementById('edit_portions_input');
+    const val = parseInt(input.value);
+    if (val > 1) {
+        input.value = val - 1;
+    }
+});
+
+document.getElementById('edit_portions_plus').addEventListener('click', function() {
+    const input = document.getElementById('edit_portions_input');
+    const val = parseInt(input.value);
+    if (val < 99) {
+        input.value = val + 1;
+    }
+});
+
+// Botones rápidos de porciones para modal de editar
+document.querySelectorAll('.portions-quick-edit').forEach(button => {
+    button.addEventListener('click', function() {
+        const portions = this.getAttribute('data-portions');
+        document.getElementById('edit_portions_input').value = portions;
+        
+        // Highlight del botón seleccionado
+        document.querySelectorAll('.portions-quick-edit').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        this.classList.add('active');
+    });
+});
+</script>
+{% endblock %}

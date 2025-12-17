@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}{% if dish %}Editar{% else %}Nuevo{% endif %} Plato - PlanBuyCook{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="bi bi-dish"></i>
+                    {% if dish %}Editar Plato{% else %}Nuevo Plato{% endif %}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Nombre del plato *</label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               value="{{ dish.name if dish else '' }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descripción (opcional)</label>
+                        <textarea class="form-control" id="description" name="description" 
+                                  rows="3">{{ dish.description if dish else '' }}</textarea>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h5><i class="bi bi-egg"></i> Ingredientes</h5>
+                    
+                    {% if ingredients %}
+                    <div id="ingredients-container">
+                        {% if dish and dish.ingredients %}
+                            {% for di in dish.ingredients %}
+                            <div class="row mb-2 ingredient-row">
+                                <div class="col-md-6">
+                                    <select name="ingredient_ids[]" class="form-select" required>
+                                        <option value="">-- Seleccionar ingrediente --</option>
+                                        {% for ing in ingredients %}
+                                        <option value="{{ ing.id }}" 
+                                                data-unit="{{ ing.unit }}"
+                                                {% if ing.id == di.ingredient_id %}selected{% endif %}>
+                                            {{ ing.name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="input-group">
+                                        <input type="number" name="quantities[]" class="form-control" 
+                                               step="0.01" min="0.01" value="{{ di.quantity }}" required>
+                                        <span class="input-group-text unit-label">{{ di.ingredient.unit }}</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="button" class="btn btn-danger btn-sm remove-ingredient">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                        <div class="row mb-2 ingredient-row">
+                            <div class="col-md-6">
+                                <select name="ingredient_ids[]" class="form-select" required>
+                                    <option value="">-- Seleccionar ingrediente --</option>
+                                    {% for ing in ingredients %}
+                                    <option value="{{ ing.id }}" data-unit="{{ ing.unit }}">
+                                        {{ ing.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="input-group">
+                                    <input type="number" name="quantities[]" class="form-control" 
+                                           step="0.01" min="0.01" placeholder="Cantidad" required>
+                                    <span class="input-group-text unit-label">-</span>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-danger btn-sm remove-ingredient">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <button type="button" class="btn btn-outline-success btn-sm mt-2" id="add-ingredient">
+                        <i class="bi bi-plus-circle"></i> Añadir Ingrediente
+                    </button>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        No hay ingredientes disponibles. 
+                        <a href="{{ url_for('main.new_ingredient') }}">Crea ingredientes primero</a>.
+                    </div>
+                    {% endif %}
+                    
+                    <hr class="mt-4">
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle"></i>
+                            {% if dish %}Actualizar{% else %}Crear{% endif %} Plato
+                        </button>
+                        <a href="{{ url_for('main.dishes') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Template para nueva fila de ingrediente
+const ingredientRowTemplate = `
+<div class="row mb-2 ingredient-row">
+    <div class="col-md-6">
+        <select name="ingredient_ids[]" class="form-select" required>
+            <option value="">-- Seleccionar ingrediente --</option>
+            {% for ing in ingredients %}
+            <option value="{{ ing.id }}" data-unit="{{ ing.unit }}">{{ ing.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-4">
+        <div class="input-group">
+            <input type="number" name="quantities[]" class="form-control" 
+                   step="0.01" min="0.01" placeholder="Cantidad" required>
+            <span class="input-group-text unit-label">-</span>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <button type="button" class="btn btn-danger btn-sm remove-ingredient">
+            <i class="bi bi-trash"></i>
+        </button>
+    </div>
+</div>
+`;
+
+// Añadir ingrediente
+document.getElementById('add-ingredient')?.addEventListener('click', function() {
+    const container = document.getElementById('ingredients-container');
+    const div = document.createElement('div');
+    div.innerHTML = ingredientRowTemplate;
+    container.appendChild(div.firstElementChild);
+});
+
+// Eliminar ingrediente
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.remove-ingredient')) {
+        e.target.closest('.ingredient-row').remove();
+    }
+});
+
+// Actualizar unidad cuando se selecciona ingrediente
+document.addEventListener('change', function(e) {
+    if (e.target.name === 'ingredient_ids[]') {
+        const selectedOption = e.target.options[e.target.selectedIndex];
+        const unit = selectedOption.dataset.unit || '-';
+        const unitLabel = e.target.closest('.ingredient-row').querySelector('.unit-label');
+        unitLabel.textContent = unit;
+    }
+});
+</script>
+{% endblock %}

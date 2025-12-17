@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Calendario - PlanBuyCook{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2><i class="bi bi-calendar3"></i> Calendario de Comidas</h2>
+            <div class="btn-group">
+                <a href="{{ url_for('main.calendar', week=week_offset-1) }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-chevron-left"></i> Semana Anterior
+                </a>
+                <a href="{{ url_for('main.calendar', week=0) }}" class="btn btn-outline-primary">
+                    <i class="bi bi-house"></i> Semana Actual
+                </a>
+                <a href="{{ url_for('main.calendar', week=week_offset+1) }}" class="btn btn-outline-secondary">
+                    Semana Siguiente <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Calendario Semanal -->
+<div class="row">
+    {% for day in days %}
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar-day"></i>
+                    {{ day.date.strftime('%A, %d de %B %Y') }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for meal_type in meal_types %}
+                    {% set meal = day.get_meal(meal_type) %}
+                    <div class="col-md-4">
+                        <div class="card meal-card {% if meal and meal.dish %}assigned{% elif meal and meal.special_type %}special{% endif %}">
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-2">
+                                    {% if meal_type == 'breakfast' %}
+                                        <i class="bi bi-sunrise"></i> {{ meal_names[meal_type] }}
+                                    {% elif meal_type == 'lunch' %}
+                                        <i class="bi bi-sun"></i> {{ meal_names[meal_type] }}
+                                    {% else %}
+                                        <i class="bi bi-moon-stars"></i> {{ meal_names[meal_type] }}
+                                    {% endif %}
+                                </h6>
+                                
+                                {% if meal %}
+                                    <p class="card-text">
+                                        <strong>{{ meal.display_name }}</strong>
+                                        {% if meal.dish %}
+                                            <br><small class="text-muted">{{ meal.dish.description or '' }}</small>
+                                        {% endif %}
+                                    </p>
+                                    
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-outline-primary" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#assignMealModal"
+                                                data-day-id="{{ day.id }}"
+                                                data-meal-type="{{ meal_type }}">
+                                            <i class="bi bi-pencil"></i> Cambiar
+                                        </button>
+                                        <form method="POST" action="{{ url_for('main.remove_meal') }}" class="d-inline">
+                                            <input type="hidden" name="day_id" value="{{ day.id }}">
+                                            <input type="hidden" name="meal_type" value="{{ meal_type }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('¿Eliminar esta comida?')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted mb-2">Sin asignar</p>
+                                    <button class="btn btn-sm btn-success" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#assignMealModal"
+                                            data-day-id="{{ day.id }}"
+                                            data-meal-type="{{ meal_type }}">
+                                        <i class="bi bi-plus-circle"></i> Asignar
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal para Asignar Comida -->
+<div class="modal fade" id="assignMealModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Asignar Comida</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('main.assign_meal') }}">
+                <div class="modal-body">
+                    <input type="hidden" name="day_id" id="modal_day_id">
+                    <input type="hidden" name="meal_type" id="modal_meal_type">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de comida:</label>
+                        <select name="assignment_type" id="assignment_type" class="form-select" required>
+                            <option value="">-- Seleccionar --</option>
+                            <option value="dish">Plato</option>
+                            <option value="order">Pedir comida</option>
+                            <option value="eat_out">Comer fuera</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3" id="dish_selection" style="display: none;">
+                        <label class="form-label">Seleccionar plato:</label>
+                        <select name="dish_id" class="form-select">
+                            <option value="">-- Seleccionar plato --</option>
+                            {% for dish in [] %}
+                            <option value="{{ dish.id }}">{{ dish.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Si no hay platos, créalos primero en la sección "Platos"</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Asignar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Cargar platos disponibles
+let dishes = [];
+
+fetch('{{ url_for("main.api_dishes") }}')
+    .then(response => response.json())
+    .then(data => {
+        dishes = data;
+    });
+
+// Configurar modal
+const assignMealModal = document.getElementById('assignMealModal');
+assignMealModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const dayId = button.getAttribute('data-day-id');
+    const mealType = button.getAttribute('data-meal-type');
+    
+    document.getElementById('modal_day_id').value = dayId;
+    document.getElementById('modal_meal_type').value = mealType;
+    
+    // Resetear formulario
+    document.getElementById('assignment_type').value = '';
+    document.getElementById('dish_selection').style.display = 'none';
+});
+
+// Mostrar/ocultar selector de platos
+document.getElementById('assignment_type').addEventListener('change', function() {
+    const dishSelection = document.getElementById('dish_selection');
+    const dishSelect = dishSelection.querySelector('select[name="dish_id"]');
+    
+    if (this.value === 'dish') {
+        dishSelection.style.display = 'block';
+        
+        // Poblar select con platos
+        dishSelect.innerHTML = '<option value="">-- Seleccionar plato --</option>';
+        dishes.forEach(dish => {
+            const option = document.createElement('option');
+            option.value = dish.id;
+            option.textContent = dish.name;
+            dishSelect.appendChild(option);
+        });
+    } else {
+        dishSelection.style.display = 'none';
+        dishSelect.value = '';
+    }
+});
+</script>
+{% endblock %}

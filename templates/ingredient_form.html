@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}{% if ingredient %}Editar{% else %}Nuevo{% endif %} Ingrediente - PlanBuyCook{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="bi bi-egg"></i>
+                    {% if ingredient %}Editar Ingrediente{% else %}Nuevo Ingrediente{% endif %}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Nombre *</label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               value="{{ ingredient.name if ingredient else '' }}" required>
+                        <div class="form-text">Ejemplo: Arroz, Pollo, Tomate, etc.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="unit" class="form-label">Unidad de medida *</label>
+                        <select class="form-select" id="unit" name="unit" required>
+                            <option value="">-- Seleccionar --</option>
+                            <option value="g" {% if ingredient and ingredient.unit == 'g' %}selected{% endif %}>
+                                Gramos (g)
+                            </option>
+                            <option value="kg" {% if ingredient and ingredient.unit == 'kg' %}selected{% endif %}>
+                                Kilogramos (kg)
+                            </option>
+                            <option value="ml" {% if ingredient and ingredient.unit == 'ml' %}selected{% endif %}>
+                                Mililitros (ml)
+                            </option>
+                            <option value="l" {% if ingredient and ingredient.unit == 'l' %}selected{% endif %}>
+                                Litros (l)
+                            </option>
+                            <option value="unidades" {% if ingredient and ingredient.unit == 'unidades' %}selected{% endif %}>
+                                Unidades
+                            </option>
+                            <option value="cucharadas" {% if ingredient and ingredient.unit == 'cucharadas' %}selected{% endif %}>
+                                Cucharadas
+                            </option>
+                            <option value="tazas" {% if ingredient and ingredient.unit == 'tazas' %}selected{% endif %}>
+                                Tazas
+                            </option>
+                        </select>
+                        <div class="form-text">Define cómo se medirá este ingrediente</div>
+                    </div>
+                    
+                    {% if not ingredient %}
+                    <div class="mb-3">
+                        <label for="initial_stock" class="form-label">Stock inicial (opcional)</label>
+                        <input type="number" class="form-control" id="initial_stock" name="initial_stock" 
+                               step="0.01" min="0" value="0">
+                        <div class="form-text">Cantidad inicial en el almacén</div>
+                    </div>
+                    {% endif %}
+                    
+                    <hr>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle"></i>
+                            {% if ingredient %}Actualizar{% else %}Crear{% endif %} Ingrediente
+                        </button>
+                        <a href="{{ url_for('main.ingredients') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

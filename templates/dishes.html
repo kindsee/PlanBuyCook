@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Platos - PlanBuyCook{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2><i class="bi bi-dish"></i> Gestión de Platos</h2>
+            <a href="{{ url_for('main.new_dish') }}" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Nuevo Plato
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if dishes %}
+<div class="row g-4">
+    {% for dish in dishes %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">{{ dish.name }}</h5>
+                {% if dish.description %}
+                <p class="card-text text-muted">{{ dish.description }}</p>
+                {% endif %}
+                
+                <h6 class="mt-3 mb-2"><i class="bi bi-egg"></i> Ingredientes:</h6>
+                {% if dish.ingredients %}
+                <ul class="list-unstyled">
+                    {% for di in dish.ingredients %}
+                    <li class="mb-1">
+                        <small>
+                            <i class="bi bi-dot"></i>
+                            {{ di.quantity }} {{ di.ingredient.unit }} de {{ di.ingredient.name }}
+                        </small>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted"><small>Sin ingredientes asignados</small></p>
+                {% endif %}
+                
+                <div class="d-flex gap-2 mt-3">
+                    <a href="{{ url_for('main.edit_dish', dish_id=dish.id) }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-pencil"></i> Editar
+                    </a>
+                    <form method="POST" action="{{ url_for('main.delete_dish', dish_id=dish.id) }}" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('¿Eliminar plato {{ dish.name }}? Esta acción no se puede deshacer.')">
+                            <i class="bi bi-trash"></i> Eliminar
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div class="card-footer bg-light">
+                <small class="text-muted">
+                    <i class="bi bi-clock"></i> Creado: {{ dish.created_at.strftime('%d/%m/%Y') }}
+                </small>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    <h5><i class="bi bi-info-circle"></i> No hay platos creados</h5>
+    <p class="mb-0">Comienza creando tu primer plato. Los platos se componen de ingredientes que debes crear primero.</p>
+    <a href="{{ url_for('main.new_dish') }}" class="btn btn-success mt-2">
+        <i class="bi bi-plus-circle"></i> Crear Primer Plato
+    </a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Generar Lista de Compra - PlanBuyCook{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="bi bi-cart-plus"></i> Generar Lista de Compra
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Nombre de la lista (opcional)</label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               placeholder="Ej: Compra Semanal Diciembre">
+                        <div class="form-text">Si lo dejas vacío, se generará automáticamente</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="start_date" class="form-label">Fecha de inicio</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" 
+                               value="{{ today }}" required>
+                        <div class="form-text">A partir de qué fecha calcular</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="weeks" class="form-label">Número de semanas</label>
+                        <select class="form-select" id="weeks" name="weeks" required>
+                            <option value="1" selected>1 semana</option>
+                            <option value="2">2 semanas</option>
+                            <option value="3">3 semanas</option>
+                            <option value="4">4 semanas (1 mes)</option>
+                        </select>
+                        <div class="form-text">Período para el cual planificar la compra</div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-info-circle"></i> ¿Cómo funciona?</h6>
+                        <ul class="mb-0 small">
+                            <li>El sistema analiza las comidas planificadas en el período seleccionado</li>
+                            <li>Calcula los ingredientes totales necesarios</li>
+                            <li>Compara con el stock actual del almacén</li>
+                            <li>Genera una lista con lo que falta comprar</li>
+                        </ul>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle"></i> Generar Lista
+                        </button>
+                        <a href="{{ url_for('main.shopping') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="alert alert-warning mt-3">
+            <h6><i class="bi bi-exclamation-triangle"></i> Importante:</h6>
+            <p class="mb-0">Asegúrate de tener comidas planificadas en el calendario antes de generar la lista. 
+            Si no hay comidas planificadas, la lista estará vacía.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Establecer fecha de hoy como valor por defecto
+document.getElementById('start_date').valueAsDate = new Date();
+</script>
+{% endblock %}

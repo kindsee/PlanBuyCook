@@ -1,0 +1,129 @@
+/* Estilos personalizados para PlanBuyCook */
+
+/* Variables de color */
+:root {
+    --primary-green: #28a745;
+    --light-green: #d4edda;
+    --warning-yellow: #ffc107;
+    --danger-red: #dc3545;
+}
+
+/* Animaciones suaves */
+.btn, .card {
+    transition: all 0.3s ease;
+}
+
+/* Mejoras de calendario */
+.calendar-day {
+    border-left: 4px solid var(--primary-green);
+}
+
+.meal-card {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid #dee2e6;
+}
+
+.meal-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.meal-card.confirmed {
+    background-color: #d4edda;
+    border-color: #28a745;
+}
+
+.meal-card.assigned {
+    border-color: #17a2b8;
+}
+
+.meal-card.special {
+    border-color: #ffc107;
+}
+
+.dish-item {
+    background-color: #f8f9fa;
+}
+
+.meal-card.confirmed .dish-item {
+    background-color: rgba(212, 237, 218, 0.5);
+}
+
+/* Indicadores de stock */
+.stock-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.stock-indicator.low {
+    background-color: var(--danger-red);
+}
+
+.stock-indicator.medium {
+    background-color: var(--warning-yellow);
+}
+
+.stock-indicator.good {
+    background-color: var(--primary-green);
+}
+
+/* Mejoras de formularios */
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary-green);
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+/* Badges personalizados */
+.badge.bg-pending {
+    background-color: var(--warning-yellow) !important;
+    color: #000;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 1.2rem;
+    }
+    
+    .meal-card {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Impresión */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    body {
+        font-size: 12pt;
+    }
+    
+    .card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+}
+
+/* Loading spinner */
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    border-width: 0.15em;
+}
+
+/* Tooltips y ayuda */
+.help-icon {
+    cursor: help;
+    color: #6c757d;
+}
+
+.help-icon:hover {
+    color: var(--primary-green);
+}

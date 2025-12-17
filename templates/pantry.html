@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Almacén - PlanBuyCook{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="bi bi-box-seam"></i> Almacén Virtual</h2>
+        <p class="text-muted">Gestiona el stock real y visualiza lo planificado</p>
+    </div>
+</div>
+
+{% if pantry_items %}
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th><i class="bi bi-tag"></i> Ingrediente</th>
+                        <th><i class="bi bi-box"></i> Stock Real</th>
+                        <th><i class="bi bi-calendar-check"></i> Stock Planificado</th>
+                        <th><i class="bi bi-cart"></i> Falta Comprar</th>
+                        <th><i class="bi bi-clock-history"></i> Actualización</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in pantry_items %}
+                    <tr>
+                        <td><strong>{{ item.ingredient.name }}</strong></td>
+                        <td>
+                            {% set qty_actual = item.stock_actual %}
+                            {% if qty_actual == 0 %}
+                                <span class="stock-low">{{ qty_actual }} {{ item.ingredient.unit }}</span>
+                            {% elif qty_actual < 100 %}
+                                <span class="stock-medium">{{ qty_actual }} {{ item.ingredient.unit }}</span>
+                            {% else %}
+                                <span class="stock-good">{{ qty_actual }} {{ item.ingredient.unit }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% set qty_plan = item.stock_planificado %}
+                            {% if qty_plan < 0 %}
+                                <span class="text-danger fw-bold">{{ qty_plan }} {{ item.ingredient.unit }}</span>
+                            {% elif qty_plan == 0 %}
+                                <span class="text-warning">{{ qty_plan }} {{ item.ingredient.unit }}</span>
+                            {% else %}
+                                <span class="text-success">{{ qty_plan }} {{ item.ingredient.unit }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.falta_comprar > 0 %}
+                                <span class="badge bg-danger">{{ item.falta_comprar }} {{ item.ingredient.unit }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.last_updated %}
+                                <small class="text-muted">{{ item.last_updated.strftime('%d/%m/%Y %H:%M') }}</small>
+                            {% else %}
+                                <small class="text-muted">-</small>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#updateStockModal"
+                                    data-ingredient-id="{{ item.ingredient.id }}"
+                                    data-ingredient-name="{{ item.ingredient.name }}"
+                                    data-ingredient-unit="{{ item.ingredient.unit }}"
+                                    data-current-stock="{{ item.stock_actual }}">
+                                <i class="bi bi-pencil"></i> Modificar
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Leyenda de colores -->
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h6><i class="bi bi-palette"></i> Leyenda:</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Stock Real:</strong>
+                        <ul class="list-unstyled mb-2">
+                            <li><span class="stock-low">■</span> Agotado (0)</li>
+                            <li><span class="stock-medium">■</span> Bajo (&lt; 100)</li>
+                            <li><span class="stock-good">■</span> Suficiente (≥ 100)</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Stock Planificado:</strong>
+                        <ul class="list-unstyled mb-2">
+                            <li><span class="text-danger fw-bold">■</span> Negativo = Falta comprar</li>
+                            <li><span class="text-warning">■</span> Cero = Justo</li>
+                            <li><span class="text-success">■</span> Positivo = Sobra</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <h5><i class="bi bi-info-circle"></i> No hay ingredientes en el almacén</h5>
+    <p class="mb-0">Primero debes crear ingredientes para poder gestionarlos en el almacén.</p>
+    <a href="{{ url_for('main.new_ingredient') }}" class="btn btn-success mt-2">
+        <i class="bi bi-plus-circle"></i> Crear Ingredientes
+    </a>
+</div>
+{% endif %}
+
+<!-- Modal para Actualizar Stock -->
+<div class="modal fade" id="updateStockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Modificar Stock</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('main.update_pantry') }}">
+                <div class="modal-body">
+                    <input type="hidden" name="ingredient_id" id="modal_ingredient_id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Ingrediente:</label>
+                        <p class="fw-bold" id="modal_ingredient_name">-</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Stock actual:</label>
+                        <p class="fw-bold" id="modal_current_stock">-</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Operación:</label>
+                        <select name="operation" id="modal_operation" class="form-select" required>
+                            <option value="set">Establecer cantidad exacta</option>
+                            <option value="add">Añadir cantidad</option>
+                            <option value="subtract">Restar cantidad</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="modal_quantity" class="form-label">Cantidad:</label>
+                        <div class="input-group">
+                            <input type="number" name="quantity" id="modal_quantity" 
+                                   class="form-control" step="0.01" min="0" required>
+                            <span class="input-group-text" id="modal_unit">-</span>
+                        </div>
+                        <small class="text-muted">Puede ser 0 para indicar que está agotado</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Actualizar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const updateStockModal = document.getElementById('updateStockModal');
+updateStockModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    
+    const ingredientId = button.getAttribute('data-ingredient-id');
+    const ingredientName = button.getAttribute('data-ingredient-name');
+    const ingredientUnit = button.getAttribute('data-ingredient-unit');
+    const currentStock = button.getAttribute('data-current-stock');
+    
+    document.getElementById('modal_ingredient_id').value = ingredientId;
+    document.getElementById('modal_ingredient_name').textContent = ingredientName;
+    document.getElementById('modal_current_stock').textContent = currentStock + ' ' + ingredientUnit;
+    document.getElementById('modal_unit').textContent = ingredientUnit;
+    document.getElementById('modal_quantity').value = '';
+    document.getElementById('modal_operation').value = 'set';
+});
+</script>
+{% endblock %}

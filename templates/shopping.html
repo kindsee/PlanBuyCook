@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Listas de Compra - PlanBuyCook{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2><i class="bi bi-cart3"></i> Listas de Compra</h2>
+            <a href="{{ url_for('main.generate_shopping') }}" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Generar Nueva Lista
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if shopping_lists %}
+<div class="row g-4">
+    {% for list in shopping_lists %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 {% if list.completed %}border-success{% endif %}">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="card-title">{{ list.name }}</h5>
+                    {% if list.completed %}
+                    <span class="badge bg-success">Completada</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark">Pendiente</span>
+                    {% endif %}
+                </div>
+                
+                <p class="card-text">
+                    <small class="text-muted">
+                        <i class="bi bi-calendar-range"></i>
+                        {{ list.start_date.strftime('%d/%m/%Y') }} - {{ list.end_date.strftime('%d/%m/%Y') }}
+                    </small>
+                </p>
+                
+                <p class="mb-3">
+                    <strong>{{ list.total_items }}</strong> 
+                    {% if list.total_items == 1 %}producto{% else %}productos{% endif %}
+                </p>
+                
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('main.shopping_detail', list_id=list.id) }}" 
+                       class="btn btn-sm btn-primary">
+                        <i class="bi bi-eye"></i> Ver Detalle
+                    </a>
+                    
+                    {% if not list.completed %}
+                    <form method="POST" action="{{ url_for('main.complete_shopping', list_id=list.id) }}" 
+                          class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-success"
+                                onclick="return confirm('¿Marcar lista como completada? Los items se añadirán al almacén.')">
+                            <i class="bi bi-check-circle"></i> Completar
+                        </button>
+                    </form>
+                    {% endif %}
+                    
+                    <form method="POST" action="{{ url_for('main.delete_shopping', list_id=list.id) }}" 
+                          class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('¿Eliminar esta lista?')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div class="card-footer bg-light">
+                <small class="text-muted">
+                    <i class="bi bi-clock"></i> Creada: {{ list.created_at.strftime('%d/%m/%Y %H:%M') }}
+                </small>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    <h5><i class="bi bi-info-circle"></i> No hay listas de compra</h5>
+    <p>Las listas de compra se generan automáticamente según tu planificación de comidas.</p>
+    <p class="mb-0">Para generar una lista:</p>
+    <ol>
+        <li>Planifica tus comidas en el <a href="{{ url_for('main.calendar') }}">calendario</a></li>
+        <li>Haz clic en "Generar Nueva Lista"</li>
+        <li>Selecciona el período (número de semanas)</li>
+        <li>El sistema calculará qué productos necesitas comprar</li>
+    </ol>
+    <a href="{{ url_for('main.generate_shopping') }}" class="btn btn-success mt-2">
+        <i class="bi bi-plus-circle"></i> Generar Primera Lista
+    </a>
+</div>
+{% endif %}
+{% endblock %}

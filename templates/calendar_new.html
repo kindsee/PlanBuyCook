@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+
+{% block title %}Calendario - PlanBuyCook{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2><i class="bi bi-calendar3"></i> Calendario de Comidas</h2>
+            <div class="btn-group">
+                <a href="{{ url_for('main.calendar', week=week_offset-1) }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-chevron-left"></i> Semana Anterior
+                </a>
+                <a href="{{ url_for('main.calendar', week=0) }}" class="btn btn-outline-primary">
+                    <i class="bi bi-house"></i> Semana Actual
+                </a>
+                <a href="{{ url_for('main.calendar', week=week_offset+1) }}" class="btn btn-outline-secondary">
+                    Semana Siguiente <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Calendario Semanal -->
+<div class="row">
+    {% for day in days %}
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar-day"></i>
+                    {{ day.date.strftime('%A, %d de %B %Y') }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for meal_type in meal_types %}
+                    {% set meal = day.get_meal(meal_type) %}
+                    <div class="col-md-4">
+                        <div class="card meal-card {% if meal and meal.confirmed %}confirmed{% elif meal and meal.meal_dishes|length > 0 %}assigned{% elif meal and meal.special_type %}special{% endif %}">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="card-subtitle mb-0">
+                                        {% if meal_type == 'breakfast' %}
+                                            <i class="bi bi-sunrise"></i> {{ meal_names[meal_type] }}
+                                        {% elif meal_type == 'lunch' %}
+                                            <i class="bi bi-sun"></i> {{ meal_names[meal_type] }}
+                                        {% else %}
+                                            <i class="bi bi-moon-stars"></i> {{ meal_names[meal_type] }}
+                                        {% endif %}
+                                    </h6>
+                                    
+                                    {% if meal and meal.confirmed %}
+                                        <span class="badge bg-success" title="Comida ejecutada">
+                                            <i class="bi bi-check-circle-fill"></i> Confirmada
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                
+                                {% if meal %}
+                                    <!-- Mostrar platos asignados -->
+                                    {% if meal.meal_dishes|length > 0 %}
+                                        <div class="dishes-list mb-2">
+                                            {% for meal_dish in meal.meal_dishes %}
+                                            <div class="dish-item d-flex justify-content-between align-items-start mb-2 p-2 border rounded {% if meal.confirmed %}bg-light{% endif %}">
+                                                <div class="flex-grow-1">
+                                                    <strong>{{ meal_dish.display_name }}</strong>
+                                                    {% if meal_dish.dish.description %}
+                                                    <br><small class="text-muted">{{ meal_dish.dish.description }}</small>
+                                                    {% endif %}
+                                                </div>
+                                                {% if not meal.confirmed %}
+                                                <form method="POST" action="{{ url_for('main.remove_dish_from_meal') }}" class="d-inline">
+                                                    <input type="hidden" name="meal_dish_id" value="{{ meal_dish.id }}">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                            onclick="return confirm('¿Eliminar este plato?')"
+                                                            title="Eliminar plato">
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            {% if not meal.confirmed %}
+                                                <button class="btn btn-sm btn-outline-success" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#assignMealModal"
+                                                        data-day-id="{{ day.id }}"
+                                                        data-meal-type="{{ meal_type }}">
+                                                    <i class="bi bi-plus-circle"></i> Añadir plato
+                                                </button>
+                                                
+                                                <form method="POST" action="{{ url_for('main.confirm_meal') }}" class="d-inline">
+                                                    <input type="hidden" name="meal_id" value="{{ meal.id }}">
+                                                    <button type="submit" class="btn btn-sm btn-success"
+                                                            onclick="return confirm('¿Confirmar que ejecutaste esta comida? Se descontarán los ingredientes del stock real.')"
+                                                            title="Confirmar comida ejecutada">
+                                                        <i class="bi bi-check-circle"></i> Confirmar
+                                                    </button>
+                                                </form>
+                                                
+                                                <button class="btn btn-sm btn-outline-info"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#replicateMealModal"
+                                                        data-meal-id="{{ meal.id }}"
+                                                        data-meal-type="{{ meal_type }}"
+                                                        title="Replicar comida a otro día">
+                                                    <i class="bi bi-files"></i> Replicar
+                                                </button>
+                                            {% else %}
+                                                <form method="POST" action="{{ url_for('main.unconfirm_meal') }}" class="d-inline">
+                                                    <input type="hidden" name="meal_id" value="{{ meal.id }}">
+                                                    <button type="submit" class="btn btn-sm btn-outline-warning"
+                                                            onclick="return confirm('¿Deshacer confirmación? Se devolverán los ingredientes al stock real.')"
+                                                            title="Deshacer confirmación">
+                                                        <i class="bi bi-arrow-counterclockwise"></i> Deshacer
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                        </div>
+                                    
+                                    <!-- Mostrar comida especial -->
+                                    {% elif meal.special_type %}
+                                        <p class="card-text">
+                                            <strong>{{ meal.display_name }}</strong>
+                                        </p>
+                                        
+                                        <div class="d-flex gap-2">
+                                            {% if not meal.confirmed %}
+                                                <button class="btn btn-sm btn-outline-primary" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#assignMealModal"
+                                                        data-day-id="{{ day.id }}"
+                                                        data-meal-type="{{ meal_type }}">
+                                                    <i class="bi bi-pencil"></i> Cambiar
+                                                </button>
+                                                <form method="POST" action="{{ url_for('main.remove_meal') }}" class="d-inline">
+                                                    <input type="hidden" name="day_id" value="{{ day.id }}">
+                                                    <input type="hidden" name="meal_type" value="{{ meal_type }}">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                            onclick="return confirm('¿Eliminar esta comida?')">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                                <form method="POST" action="{{ url_for('main.confirm_meal') }}" class="d-inline">
+                                                    <input type="hidden" name="meal_id" value="{{ meal.id }}">
+                                                    <button type="submit" class="btn btn-sm btn-success"
+                                                            title="Marcar como ejecutada">
+                                                        <i class="bi bi-check-circle"></i>
+                                                    </button>
+                                                </form>
+                                            {% else %}
+                                                <span class="text-success"><i class="bi bi-check-circle-fill"></i> Ejecutada</span>
+                                            {% endif %}
+                                        </div>
+                                    
+                                    <!-- Sin asignar -->
+                                    {% else %}
+                                        <p class="text-muted mb-2">Sin asignar</p>
+                                        <button class="btn btn-sm btn-success" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#assignMealModal"
+                                                data-day-id="{{ day.id }}"
+                                                data-meal-type="{{ meal_type }}">
+                                            <i class="bi bi-plus-circle"></i> Asignar
+                                        </button>
+                                    {% endif %}
+                                {% else %}
+                                    <p class="text-muted mb-2">Sin asignar</p>
+                                    <button class="btn btn-sm btn-success" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#assignMealModal"
+                                            data-day-id="{{ day.id }}"
+                                            data-meal-type="{{ meal_type }}">
+                                        <i class="bi bi-plus-circle"></i> Asignar
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal para Asignar Comida -->
+<div class="modal fade" id="assignMealModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Añadir Plato a Comida</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('main.assign_meal') }}">
+                <div class="modal-body">
+                    <input type="hidden" name="day_id" id="modal_day_id">
+                    <input type="hidden" name="meal_type" id="modal_meal_type">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de comida:</label>
+                        <select name="assignment_type" id="assignment_type" class="form-select" required>
+                            <option value="dish" selected>Plato</option>
+                            <option value="order">Pedir comida</option>
+                            <option value="eat_out">Comer fuera</option>
+                        </select>
+                    </div>
+                    
+                    <div id="dish_selection">
+                        <div class="mb-3">
+                            <label class="form-label">Seleccionar plato:</label>
+                            <select name="dish_id" id="dish_select" class="form-select" required>
+                                <option value="">-- Seleccionar plato --</option>
+                            </select>
+                            <div class="form-text">Si no hay platos, créalos primero en la sección "Platos"</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Número de porciones:</label>
+                            <div class="input-group">
+                                <button class="btn btn-outline-secondary" type="button" id="portions_minus">
+                                    <i class="bi bi-dash"></i>
+                                </button>
+                                <input type="number" name="portions" id="portions_input" 
+                                       class="form-control text-center" value="1" min="1" max="99" required>
+                                <button class="btn btn-outline-secondary" type="button" id="portions_plus">
+                                    <i class="bi bi-plus"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle"></i> 
+                                Ejemplo: "Tortilla x5" = 5 porciones del plato
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Añadir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Replicar Comida -->
+<div class="modal fade" id="replicateMealModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Replicar Comida a Otro Día</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('main.replicate_meal') }}">
+                <div class="modal-body">
+                    <input type="hidden" name="source_meal_id" id="replicate_meal_id">
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 
+                        Esta función copiará todos los platos de la comida seleccionada al día que elijas.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Seleccionar día destino:</label>
+                        <input type="date" name="target_date" class="form-control" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de comida destino:</label>
+                        <select name="target_meal_type" class="form-select" required>
+                            <option value="breakfast">Desayuno</option>
+                            <option value="lunch">Almuerzo</option>
+                            <option value="dinner">Cena</option>
+                        </select>
+                        <div class="form-text">Puedes copiar un desayuno a una cena, por ejemplo</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-files"></i> Replicar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Cargar platos disponibles
+let dishes = [];
+
+fetch('{{ url_for("main.api_dishes") }}')
+    .then(response => response.json())
+    .then(data => {
+        dishes = data;
+    })
+    .catch(error => console.error('Error cargando platos:', error));
+
+// Configurar modal de asignación
+const assignMealModal = document.getElementById('assignMealModal');
+assignMealModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const dayId = button.getAttribute('data-day-id');
+    const mealType = button.getAttribute('data-meal-type');
+    
+    document.getElementById('modal_day_id').value = dayId;
+    document.getElementById('modal_meal_type').value = mealType;
+    
+    // Resetear formulario
+    document.getElementById('assignment_type').value = 'dish';
+    document.getElementById('dish_selection').style.display = 'block';
+    document.getElementById('portions_input').value = 1;
+    
+    // Poblar select con platos
+    populateDishSelect();
+});
+
+function populateDishSelect() {
+    const dishSelect = document.getElementById('dish_select');
+    dishSelect.innerHTML = '<option value="">-- Seleccionar plato --</option>';
+    
+    dishes.forEach(dish => {
+        const option = document.createElement('option');
+        option.value = dish.id;
+        option.textContent = dish.name;
+        dishSelect.appendChild(option);
+    });
+}
+
+// Mostrar/ocultar selector de platos
+document.getElementById('assignment_type').addEventListener('change', function() {
+    const dishSelection = document.getElementById('dish_selection');
+    const dishSelect = document.getElementById('dish_select');
+    
+    if (this.value === 'dish') {
+        dishSelection.style.display = 'block';
+        dishSelect.required = true;
+        populateDishSelect();
+    } else {
+        dishSelection.style.display = 'none';
+        dishSelect.required = false;
+    }
+});
+
+// Botones +/- para porciones
+document.getElementById('portions_minus').addEventListener('click', function() {
+    const input = document.getElementById('portions_input');
+    const val = parseInt(input.value);
+    if (val > 1) {
+        input.value = val - 1;
+    }
+});
+
+document.getElementById('portions_plus').addEventListener('click', function() {
+    const input = document.getElementById('portions_input');
+    const val = parseInt(input.value);
+    if (val < 99) {
+        input.value = val + 1;
+    }
+});
+
+// Configurar modal de replicación
+const replicateMealModal = document.getElementById('replicateMealModal');
+replicateMealModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const mealId = button.getAttribute('data-meal-id');
+    const mealType = button.getAttribute('data-meal-type');
+    
+    document.getElementById('replicate_meal_id').value = mealId;
+    
+    // Pre-seleccionar el mismo tipo de comida
+    const targetSelect = document.querySelector('select[name="target_meal_type"]');
+    targetSelect.value = mealType;
+});
+</script>
+{% endblock %}
